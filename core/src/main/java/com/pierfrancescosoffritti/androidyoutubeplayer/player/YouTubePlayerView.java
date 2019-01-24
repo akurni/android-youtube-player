@@ -114,7 +114,7 @@ public class YouTubePlayerView extends FrameLayout implements NetworkReceiver.Ne
     public void release() {
         removeView(youTubePlayer);
         youTubePlayer.removeAllViews();
-        youTubePlayer.destroy();
+        youTubePlayer.onDestroy();
         try {
             getContext().unregisterReceiver(networkReceiver);
         } catch (Exception ignore) {

@@ -2,19 +2,19 @@ package com.pierfrancescosoffritti.androidyoutubeplayer.player;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
-import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 
 import com.pierfrancescosoffritti.androidyoutubeplayer.R;
 import com.pierfrancescosoffritti.androidyoutubeplayer.player.listeners.YouTubePlayerInitListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.player.listeners.YouTubePlayerListener;
+
+import org.xwalk.core.XWalkSettings;
+import org.xwalk.core.XWalkUIClient;
+import org.xwalk.core.XWalkView;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -30,12 +30,14 @@ import androidx.annotation.Nullable;
 /**
  * WebView implementing the actual YouTube Player
  */
-class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlayerBridge.YouTubePlayerBridgeCallbacks {
+class WebViewYouTubePlayer extends XWalkView implements YouTubePlayer, YouTubePlayerBridge.YouTubePlayerBridgeCallbacks {
 
     private YouTubePlayerInitListener youTubePlayerInitListener;
 
-    @NonNull private final Set<YouTubePlayerListener> youTubePlayerListeners;
-    @NonNull private final Handler mainThreadHandler;
+    @NonNull
+    private final Set<YouTubePlayerListener> youTubePlayerListeners;
+    @NonNull
+    private final Handler mainThreadHandler;
 
     protected boolean backgroundPlaybackEnabled = false;
 
@@ -44,12 +46,7 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
     }
 
     protected WebViewYouTubePlayer(Context context, AttributeSet attrs) {
-        this(context, attrs, 0);
-    }
-
-    protected WebViewYouTubePlayer(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-
+        super(context, attrs);
         mainThreadHandler = new Handler(Looper.getMainLooper());
         youTubePlayerListeners = new HashSet<>();
     }
@@ -69,7 +66,7 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
         mainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                loadUrl("javascript:loadVideo('" +videoId +"', " +startSeconds +")");
+                loadUrl("javascript:loadVideo('" + videoId + "', " + startSeconds + ")");
             }
         });
     }
@@ -79,7 +76,7 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
         mainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                loadUrl("javascript:cueVideo('" +videoId +"', " +startSeconds +")");
+                loadUrl("javascript:cueVideo('" + videoId + "', " + startSeconds + ")");
             }
         });
     }
@@ -122,16 +119,16 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
         mainThreadHandler.post(new Runnable() {
             @Override
             public void run() {
-                loadUrl("javascript:seekTo(" +time +")");
+                loadUrl("javascript:seekTo(" + time + ")");
             }
         });
     }
 
     @Override
-    public void destroy() {
+    public void onDestroy() {
         youTubePlayerListeners.clear();
         mainThreadHandler.removeCallbacksAndMessages(null);
-        super.destroy();
+        super.onDestroy();
     }
 
     @NonNull
@@ -141,7 +138,7 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
 
     @Override
     public boolean addListener(@NonNull YouTubePlayerListener listener) {
-        if(listener == null) {
+        if (listener == null) {
             Log.e("YouTubePlayer", "null YouTubePlayerListener not allowed.");
             return false;
         }
@@ -156,9 +153,9 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
 
     @SuppressLint("SetJavaScriptEnabled")
     private void initWebView(IFramePlayerOptions playerOptions) {
-        WebSettings settings = this.getSettings();
+        XWalkSettings settings = this.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setCacheMode(XWalkSettings.LOAD_NO_CACHE);
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         this.addJavascriptInterface(new YouTubePlayerBridge(this), "YouTubePlayerBridge");
@@ -167,19 +164,6 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
         final String formattedString = unformattedString.replace("<<injectedPlayerVars>>", playerOptions.toString());
 
         this.loadDataWithBaseURL("https://www.youtube.com", formattedString, "text/html", "utf-8", null);
-
-        // if the video's thumbnail is not in memory, show a black screen
-        this.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public Bitmap getDefaultVideoPoster() {
-                Bitmap result = super.getDefaultVideoPoster();
-
-                if(result == null)
-                    return Bitmap.createBitmap(1, 1, Bitmap.Config.RGB_565);
-                else
-                    return result;
-            }
-        });
     }
 
     private String readYouTubePlayerHTMLFromFile() {
@@ -192,7 +176,7 @@ class WebViewYouTubePlayer extends WebView implements YouTubePlayer, YouTubePlay
             String read;
             StringBuilder sb = new StringBuilder();
 
-            while ( ( read = bufferedReader.readLine() ) != null )
+            while ((read = bufferedReader.readLine()) != null)
                 sb.append(read).append("\n");
             inputStream.close();
 
